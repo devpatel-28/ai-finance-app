@@ -556,8 +556,10 @@ with tab2:
                 title="AUM Comparison (Cr)",
                 text_auto=".2s",
             )
-            fig_aum.update_layout(showlegend=False, xaxis_title="", yaxis_title="AUM (Cr)", template="plotly_white")
-            st.plotly_chart(fig_aum, use_container_width=True)
+            fig_aum.update_layout(
+                showlegend=False, xaxis_title="", yaxis_title="AUM (Cr)", template="plotly_white", dragmode=False
+            )
+            st.plotly_chart(fig_aum, use_container_width=True, config={"displayModeBar": False})
 
         with chart_col2:
             fig_exp = px.bar(
@@ -568,8 +570,14 @@ with tab2:
                 title="Expense Ratio Comparison",
                 text_auto=".2f",
             )
-            fig_exp.update_layout(showlegend=False, xaxis_title="", yaxis_title="Expense Ratio (%)", template="plotly_white")
-            st.plotly_chart(fig_exp, use_container_width=True)
+            fig_exp.update_layout(
+                showlegend=False,
+                xaxis_title="",
+                yaxis_title="Expense Ratio (%)",
+                template="plotly_white",
+                dragmode=False,
+            )
+            st.plotly_chart(fig_exp, use_container_width=True, config={"displayModeBar": False})
 
         ret_cols = [
             "1-Month Return (%)",
@@ -588,8 +596,8 @@ with tab2:
             barmode="group",
             title="Return Comparison Across Time Horizons",
         )
-        fig_returns.update_layout(template="plotly_white")
-        st.plotly_chart(fig_returns, use_container_width=True)
+        fig_returns.update_layout(template="plotly_white", dragmode=False)
+        st.plotly_chart(fig_returns, use_container_width=True, config={"displayModeBar": False})
 
 with tab3:
     if data.empty:
@@ -605,8 +613,10 @@ with tab3:
                 title="Volatility (Beta) Comparison",
                 text_auto=".2f",
             )
-            fig_risk.update_layout(showlegend=False, xaxis_title="", yaxis_title="Beta", template="plotly_white")
-            st.plotly_chart(fig_risk, use_container_width=True)
+            fig_risk.update_layout(
+                showlegend=False, xaxis_title="", yaxis_title="Beta", template="plotly_white", dragmode=False
+            )
+            st.plotly_chart(fig_risk, use_container_width=True, config={"displayModeBar": False})
 
         with rc2:
             fig_te = px.bar(
@@ -617,8 +627,14 @@ with tab3:
                 title="Tracking Error Comparison",
                 text_auto=".2f",
             )
-            fig_te.update_layout(showlegend=False, xaxis_title="", yaxis_title="Tracking Error (%)", template="plotly_white")
-            st.plotly_chart(fig_te, use_container_width=True)
+            fig_te.update_layout(
+                showlegend=False,
+                xaxis_title="",
+                yaxis_title="Tracking Error (%)",
+                template="plotly_white",
+                dragmode=False,
+            )
+            st.plotly_chart(fig_te, use_container_width=True, config={"displayModeBar": False})
 
         val_long = data.melt(
             id_vars=["Fund"],
@@ -634,5 +650,5 @@ with tab3:
             barmode="group",
             title="Valuation & Dividend Metrics",
         )
-        fig_val.update_layout(template="plotly_white")
-        st.plotly_chart(fig_val, use_container_width=True)
+        fig_val.update_layout(template="plotly_white", dragmode=False)
+        st.plotly_chart(fig_val, use_container_width=True, config={"displayModeBar": False})
