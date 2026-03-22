@@ -1,8 +1,12 @@
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 import yfinance as yf
+
+session = requests.Session()
+session.headers['User-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
 
 
 st.set_page_config(
@@ -268,7 +272,7 @@ def _safe_float(value) -> float:
 
 @st.cache_data(ttl=3600)
 def _get_benchmark_returns() -> pd.Series:
-    benchmark_hist = yf.Ticker("^NSEI").history(period="5y", auto_adjust=True)
+    benchmark_hist = yf.Ticker("^NSEI", session=session).history(period="5y", auto_adjust=True)
     if benchmark_hist.empty:
         return pd.Series(dtype=float)
     return benchmark_hist["Close"].pct_change().dropna()
@@ -312,7 +316,7 @@ def fetch_live_category_data(main_type: str, category: str) -> pd.DataFrame:
 
     for ticker in tickers:
         try:
-            tk = yf.Ticker(ticker)
+            tk = yf.Ticker(ticker, session=session)
             info = tk.info or {}
             hist = tk.history(period="5y", auto_adjust=True)
             if hist.empty or "Close" not in hist:
