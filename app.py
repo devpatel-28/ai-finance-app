@@ -362,6 +362,23 @@ def _resolve_expense_ratio(ticker: str, expense_ratio_raw) -> float:
     return DEFAULT_EXPENSE_RATIO
 
 
+def _extract_close_series(hist: pd.DataFrame) -> pd.Series:
+    """Best-effort close prices; empty series only if no usable numeric price column."""
+    if hist is None or hist.empty:
+        return pd.Series(dtype=float)
+    for col in ("Close", "Adj Close"):
+        if col in hist.columns:
+            s = hist[col].dropna()
+            if not s.empty:
+                return s
+    num = hist.select_dtypes(include=[np.number])
+    if not num.empty:
+        s = num.iloc[:, 0].dropna()
+        if not s.empty:
+            return s
+    return pd.Series(dtype=float)
+
+
 @st.cache_data(ttl=1800)
 def fetch_live_category_data(main_type: str, category: str) -> pd.DataFrame:
     tickers = LIVE_CATEGORY_TICKERS.get(main_type, {}).get(category, [])
@@ -372,68 +389,99 @@ def fetch_live_category_data(main_type: str, category: str) -> pd.DataFrame:
     rows = []
 
     for ticker in tickers:
+        fund_name = FUND_NAMES.get(ticker, ticker)
+
         try:
             tk = yf.Ticker(ticker)
-            info = tk.info or {}
-            hist = tk.history(period="5y", auto_adjust=True)
-            if hist.empty:
-                continue
-            if "Close" not in hist.columns:
-                continue
-
-            close = hist["Close"].dropna()
-            if close.empty:
-                continue
-            daily_ret = close.pct_change().dropna()
-
-            common_idx = daily_ret.index.intersection(benchmark.index)
-            if len(common_idx) > 30 and float(np.var(benchmark.loc[common_idx])) != 0:
-                beta = np.cov(daily_ret.loc[common_idx], benchmark.loc[common_idx])[0, 1] / np.var(benchmark.loc[common_idx])
-                tracking_error = float((daily_ret.loc[common_idx] - benchmark.loc[common_idx]).std() * np.sqrt(252) * 100)
-            else:
-                beta = np.nan
-                tracking_error = np.nan
-
-            fund_name = FUND_NAMES.get(ticker, ticker)
-
-            total_assets = _safe_float(info.get("totalAssets"))
-            aum_cr = _resolve_aum_cr(ticker, total_assets)
-
-            expense_ratio_raw = info.get("annualReportExpenseRatio", info.get("expenseRatio"))
-            expense_ratio = _resolve_expense_ratio(ticker, expense_ratio_raw)
-
-            div_yield = _safe_float(info.get("yield"))
-            div_yield = div_yield * 100 if pd.notna(div_yield) and div_yield <= 1 else div_yield
-
-            liquidity = _safe_float(
-                info.get("averageVolume")
-                or info.get("averageDailyVolume10Day")
-                or info.get("volume")
-            )
-
-            rows.append(
-                {
-                    "Fund": fund_name,
-                    "Ticker": ticker,
-                    "AUM (Cr)": aum_cr,
-                    "Expense Ratio (%)": expense_ratio,
-                    "NAV (INR)": _safe_float(close.iloc[-1]),
-                    "1-Month Return (%)": _compute_pct_return(close, 21),
-                    "3-Month Return (%)": _compute_pct_return(close, 63),
-                    "6-Month Return (%)": _compute_pct_return(close, 126),
-                    "1-Year Return (%)": _compute_pct_return(close, 252),
-                    "3-Year Return (%)": _compute_pct_return(close, 756),
-                    "5-Year Return (%)": _compute_pct_return(close, 1260),
-                    "Tracking Error (%)": tracking_error,
-                    "P/E Ratio": _safe_float(info.get("trailingPE")),
-                    "P/B Ratio": _safe_float(info.get("priceToBook")),
-                    "Dividend Yield (%)": div_yield,
-                    "Volatility (Beta)": _safe_float(beta),
-                    "Liquidity/Volume": liquidity,
-                }
-            )
         except Exception:
             continue
+
+        try:
+            hist = tk.history(period="1y", auto_adjust=True)
+        except Exception:
+            hist = pd.DataFrame()
+
+        if hist.empty:
+            continue
+
+        try:
+            info = tk.info
+        except Exception:
+            info = {}
+        if info is None:
+            info = {}
+
+        close = _extract_close_series(hist)
+        if close.empty:
+            last_nav = 0.0
+        else:
+            last_nav = float(close.iloc[-1]) if pd.notna(close.iloc[-1]) else 0.0
+
+        daily_ret = close.pct_change().dropna() if len(close) > 1 else pd.Series(dtype=float)
+
+        beta = np.nan
+        tracking_error = np.nan
+        if not benchmark.empty and len(daily_ret) > 0:
+            common_idx = daily_ret.index.intersection(benchmark.index)
+            if len(common_idx) > 5 and float(np.var(benchmark.loc[common_idx])) != 0:
+                try:
+                    beta = np.cov(daily_ret.loc[common_idx], benchmark.loc[common_idx])[0, 1] / np.var(
+                        benchmark.loc[common_idx]
+                    )
+                    tracking_error = float(
+                        (daily_ret.loc[common_idx] - benchmark.loc[common_idx]).std() * np.sqrt(252) * 100
+                    )
+                except Exception:
+                    pass
+
+        total_assets = _safe_float(info.get("totalAssets"))
+        aum_cr = _resolve_aum_cr(ticker, total_assets)
+
+        expense_ratio_raw = info.get("annualReportExpenseRatio") or info.get("expenseRatio")
+        expense_ratio = _resolve_expense_ratio(ticker, expense_ratio_raw)
+
+        div_yield = _safe_float(info.get("yield"))
+        if pd.notna(div_yield) and div_yield <= 1:
+            div_yield = div_yield * 100
+
+        liquidity = _safe_float(
+            info.get("averageVolume")
+            or info.get("averageDailyVolume10Day")
+            or info.get("volume")
+        )
+        if pd.isna(liquidity):
+            liquidity = 0.0
+
+        pe = _safe_float(info.get("trailingPE"))
+        pb = _safe_float(info.get("priceToBook"))
+        if pd.isna(pe):
+            pe = 0.0
+        if pd.isna(pb):
+            pb = 0.0
+        if pd.isna(div_yield):
+            div_yield = 0.0
+
+        rows.append(
+            {
+                "Fund": fund_name,
+                "Ticker": ticker,
+                "AUM (Cr)": aum_cr,
+                "Expense Ratio (%)": expense_ratio,
+                "NAV (INR)": last_nav,
+                "1-Month Return (%)": _compute_pct_return(close, 21),
+                "3-Month Return (%)": _compute_pct_return(close, 63),
+                "6-Month Return (%)": _compute_pct_return(close, 126),
+                "1-Year Return (%)": _compute_pct_return(close, 252),
+                "3-Year Return (%)": _compute_pct_return(close, 756),
+                "5-Year Return (%)": _compute_pct_return(close, 1260),
+                "Tracking Error (%)": tracking_error if pd.notna(tracking_error) else 0.0,
+                "P/E Ratio": pe,
+                "P/B Ratio": pb,
+                "Dividend Yield (%)": div_yield,
+                "Volatility (Beta)": _safe_float(beta) if pd.notna(beta) else 0.0,
+                "Liquidity/Volume": liquidity,
+            }
+        )
 
     df = pd.DataFrame(rows).round(2)
     if df.empty:
