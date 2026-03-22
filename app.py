@@ -118,7 +118,7 @@ METRIC_COLUMNS = [
 # Note: Yahoo coverage changes over time; invalid/unavailable symbols are skipped automatically.
 LIVE_CATEGORY_TICKERS = {
     "ETFs": {
-        "Large Cap": ["NIFTYBEES.NS", "SETFNIF50.NS", "UTINIFTETF.NS", "ICICINIFTY.NS", "KOTAKNIFTY.NS", "HDFCNIFTY.NS"],
+        "Large Cap": ["NIFTYBEES.NS", "SETFNIF50.NS", "ICICINIFTY.NS", "UTINIFTETF.NS", "KOTAKNIFTY.NS", "HDFCNIFTY.NS"],
         "Mid Cap": ["JUNIORBEES.NS", "MID150BEES.NS", "ICICIM150.NS", "NIFMID150.NS", "HDFCMID150.NS", "KOTAKMID50.NS"],
         "Small Cap": ["NIFSMALLCAP250.NS", "SMALLCAP.NS", "ICICISMCAP.NS", "HDFCSML250.NS", "KOTAKSML250.NS", "NIFSML250.NS"],
         "Gold": ["GOLDBEES.NS", "GOLD1.NS", "KOTAKGOLD.NS", "HDFCGOLD.NS", "SBIGETS.NS", "ICICIGOLD.NS"],
@@ -151,6 +151,67 @@ LIVE_CATEGORY_TICKERS = {
         "Large & Mid Cap": ["0P0000XW8E.BO", "0P0000YWM2.BO", "0P0000XW4Z.BO"],
         "Value": ["0P0000XVUY.BO", "0P0000XW1Q.BO", "0P0000XW3K.BO"],
     },
+}
+
+FUND_NAMES = {
+    "0P00005WZG.BO": "SBI Bluechip Fund",
+    "0P0000XVTL.BO": "Mirae Asset Large Cap",
+    "0P0000XW8Z.BO": "Axis Bluechip",
+    "0P0000XVUS.BO": "ICICI Pru Bluechip",
+    "0P0000XW1A.BO": "HDFC Top 100",
+    "0P0001BA8J.BO": "Kotak Emerging Equity",
+    "0P0000XVU3.BO": "HDFC Mid-Cap",
+    "0P0000YWLX.BO": "Axis Midcap",
+    "0P0000XW8D.BO": "Nippon India Growth",
+    "0P0000XVWA.BO": "SBI Magnum Midcap",
+    "0P0000YWL1.BO": "SBI Small Cap",
+    "0P0000XW1C.BO": "Nippon India Small Cap",
+    "0P0000XW37.BO": "HDFC Small Cap",
+    "0P0000YWM1.BO": "Axis Small Cap",
+    "0P0000YWL9.BO": "Kotak Small Cap",
+    "0P0000YWLK.BO": "Parag Parikh Flexi Cap",
+    "0P00005WLZ.BO": "HDFC Flexi Cap",
+    "0P0000XW5F.BO": "SBI Flexi Cap",
+    "0P0000XW4K.BO": "Kotak Flexi Cap",
+    "0P0000XVU4.BO": "UTI Flexi Cap",
+    "0P000171MV.BO": "Quant ELSS",
+    "0P0000XW91.BO": "Mirae Asset Tax Saver",
+    "0P0000XVY9.BO": "Axis Long Term",
+    "0P0000XW8C.BO": "SBI Long Term",
+    "0P0000XW4L.BO": "DSP Tax Saver",
+    "0P0000XVTR.BO": "SBI Contra",
+    "0P0000XW6F.BO": "Kotak India EQ Contra",
+    "0P0000XW2E.BO": "Invesco India Contra",
+    "0P0000YWM9.BO": "SBI Focused Equity",
+    "0P0000XVY2.BO": "HDFC Focused 30",
+    "0P0000XW1K.BO": "Nippon India Focused",
+    "0P0000XVW6.BO": "Nippon India Multi Cap",
+    "0P0000XW4A.BO": "ICICI Pru Multicap",
+    "0P0000XW3G.BO": "Quant Active Fund",
+    "0P0000XVUE.BO": "ICICI Pru Equity & Debt",
+    "0P0000YWL6.BO": "SBI Equity Hybrid",
+    "0P0000XW6H.BO": "HDFC Hybrid Equity",
+    "0P0000XVU9.BO": "HDFC Balanced Advantage",
+    "0P0000XW4G.BO": "Edelweiss BAF",
+    "0P0000XVYP.BO": "ICICI Pru BAF",
+    "0P0000XW2P.BO": "Aditya Birla Corporate Bond",
+    "0P0000XVW9.BO": "HDFC Corporate Bond",
+    "0P0000XW5B.BO": "ICICI Pru Corporate Bond",
+    "0P0000XVV1.BO": "SBI Liquid Fund",
+    "0P0000XW7E.BO": "HDFC Liquid Fund",
+    "0P0000XW3A.BO": "Aditya Birla Liquid",
+    "0P0000XW5Q.BO": "UTI Nifty 50 Index",
+    "0P0000XVUW.BO": "HDFC Index Nifty 50",
+    "0P0000XW1F.BO": "SBI Nifty Index",
+    "0P0000XW8E.BO": "Mirae Asset Emerging Bluechip",
+    "0P0000YWM2.BO": "SBI Large & Midcap",
+    "0P0000XW4Z.BO": "Kotak Equity Opp",
+    "0P0000XVUY.BO": "ICICI Pru Value Discovery",
+    "0P0000XW1Q.BO": "Bandhan Sterling Value",
+    "0P0000XW3K.BO": "Nippon India Value",
+    "NIFTYBEES.NS": "Nippon India Nifty 50 ETF",
+    "SETFNIF50.NS": "SBI Nifty 50 ETF",
+    "ICICINIFTY.NS": "ICICI Pru Nifty 50 ETF",
 }
 
 # Reference fallback values (realistic market-aligned estimates) used when Yahoo fields are missing.
@@ -315,7 +376,9 @@ def fetch_live_category_data(main_type: str, category: str) -> pd.DataFrame:
             tk = yf.Ticker(ticker)
             info = tk.info or {}
             hist = tk.history(period="5y", auto_adjust=True)
-            if hist.empty or "Close" not in hist:
+            if hist.empty:
+                continue
+            if "Close" not in hist.columns:
                 continue
 
             close = hist["Close"].dropna()
@@ -331,13 +394,7 @@ def fetch_live_category_data(main_type: str, category: str) -> pd.DataFrame:
                 beta = np.nan
                 tracking_error = np.nan
 
-            fund_name = (
-                info.get("shortName")
-                or info.get("longName")
-                or info.get("displayName")
-                or info.get("name")
-                or ticker
-            )
+            fund_name = FUND_NAMES.get(ticker, ticker)
 
             total_assets = _safe_float(info.get("totalAssets"))
             aum_cr = _resolve_aum_cr(ticker, total_assets)
